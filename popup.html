@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h3>Memorable Passwords</h3>
+  
+  <div class="input-group">
+    <label>Name</label>
+    <input type="text" id="name" placeholder="e.g., Gowtham">
+  </div>
+  
+  <div class="input-group">
+    <label>City</label>
+    <input type="text" id="city" placeholder="e.g., Vishakapatnam">
+  </div>
+  
+  <div class="input-group">
+    <label>Date of Birth</label>
+    <input type="text" id="dob" placeholder="e.g., 2nd april 2008">
+  </div>
+  
+  <div class="input-group">
+    <label>Password Length: <span id="lengthDisplay">16</span></label>
+    <input type="range" id="length" min="8" max="32" value="16">
+  </div>
+  
+  <div class="button-row">
+    <button id="saveBtn" class="btn-secondary">Save Info</button>
+    <button id="generateBtn" class="btn-primary">Generate</button>
+  </div>
+  
+  <!-- The output container, hidden by default -->
+  <div id="outputContainer" style="display: none;">
+    <div class="output-header">
+      <span>Click to autofill:</span>
+      <button id="refreshBtn" class="btn-icon" title="Generate new options">↻</button>
+    </div>
+    <div id="output"></div>
+  </div>
+  
+  <p class="tip">🔒 Add a secret number (like '99') to the end when using these!</p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
