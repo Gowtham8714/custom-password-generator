@@ -5,43 +5,60 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h3>Memorable Passwords</h3>
   
-  <div class="input-group">
-    <label>Name</label>
-    <input type="text" id="name" placeholder="e.g., Gowtham">
+  <div class="header-nav">
+    <h3>Memorable Passwords</h3>
+    <button id="toggleVaultBtn" class="btn-icon" title="View Saved Passwords">🗃️</button>
   </div>
   
-  <div class="input-group">
-    <label>City</label>
-    <input type="text" id="city" placeholder="e.g., Vishakapatnam">
-  </div>
-  
-  <div class="input-group">
-    <label>Date of Birth</label>
-    <input type="text" id="dob" placeholder="e.g., 2nd april 2008">
-  </div>
-  
-  <div class="input-group">
-    <label>Password Length: <span id="lengthDisplay">16</span></label>
-    <input type="range" id="length" min="8" max="32" value="16">
-  </div>
-  
-  <div class="button-row">
-    <button id="saveBtn" class="btn-secondary">Save Info</button>
-    <button id="generateBtn" class="btn-primary">Generate</button>
-  </div>
-  
-  <!-- The output container, hidden by default -->
-  <div id="outputContainer" style="display: none;">
-    <div class="output-header">
-      <span>Click to autofill:</span>
-      <button id="refreshBtn" class="btn-icon" title="Generate new options">↻</button>
+  <!-- MAIN GENERATOR VIEW -->
+  <div id="generatorView">
+    <div class="input-group">
+      <label>Name</label>
+      <input type="text" id="name" placeholder="e.g., Gowtham">
     </div>
-    <div id="output"></div>
+    
+    <div class="input-group">
+      <label>City</label>
+      <input type="text" id="city" placeholder="e.g., Vishakapatnam">
+    </div>
+    
+    <div class="input-group">
+      <label>Date of Birth</label>
+      <input type="text" id="dob" placeholder="e.g., 2nd april 2008">
+    </div>
+    
+    <div class="input-group">
+      <label>Password Length: <span id="lengthDisplay">16</span></label>
+      <input type="range" id="length" min="8" max="32" value="16">
+    </div>
+    
+    <div class="button-row">
+      <button id="saveBtn" class="btn-secondary">Save Info</button>
+      <button id="generateBtn" class="btn-primary">Generate</button>
+    </div>
+    
+    <div id="outputContainer" style="display: none;">
+      <div class="output-header">
+        <span>Click to autofill & save:</span>
+        <button id="refreshBtn" class="btn-icon" title="Generate new options">↻</button>
+      </div>
+      <div id="output"></div>
+    </div>
+    
+    <p class="tip">🔒 Passwords & usernames are saved to your vault on click!</p>
   </div>
-  
-  <p class="tip">🔒 Add a secret number (like '99') to the end when using these!</p>
+
+  <!-- VAULT VIEW -->
+  <div id="vaultView" style="display: none;">
+    <div class="vault-controls">
+      <span class="vault-title">Saved Accounts</span>
+      <button id="clearVaultBtn" class="btn-icon" title="Delete all saved passwords">🗑️</button>
+    </div>
+    <div id="vaultList">
+      <!-- Saved passwords and usernames will appear here -->
+    </div>
+  </div>
 
   <script src="popup.js"></script>
 </body>

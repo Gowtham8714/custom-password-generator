@@ -6,9 +6,7 @@ function getRandomInt(min, max) {
 function extractRandomStart(word) {
     word = word.trim();
     const length = getRandomInt(3, 5);
-    if (word.length < length) {
-        return word.charAt(0).toUpperCase() + word.slice(1);
-    }
+    if (word.length < length) return word.charAt(0).toUpperCase() + word.slice(1);
     const sliced = word.substring(0, length);
     return sliced.charAt(0).toUpperCase() + sliced.slice(1);
 }
@@ -24,8 +22,7 @@ function extractDateAsNumbers(dob) {
         'december': '12', 'dec': '12'
     };
     for (const [month, num] of Object.entries(months)) {
-        const regex = new RegExp(`\\b${month}\\b`, 'g');
-        processedDob = processedDob.replace(regex, num);
+        processedDob = processedDob.replace(new RegExp(`\\b${month}\\b`, 'g'), num);
     }
     return processedDob.replace(/\D/g, ''); 
 }
@@ -47,49 +44,32 @@ function generatePasswords(name, city, dob, targetLength, numOptions = 4) {
         let nPart = extractRandomStart(name);
         let cPart = extractRandomStart(city);
 
-        // Randomly make one of the parts lowercase for variety
         if (Math.random() > 0.5) nPart = nPart.toLowerCase();
         else cPart = cPart.toLowerCase();
 
         const symbol = symbols[getRandomInt(0, symbols.length - 1)];
-        
-        // 1. Shuffle the WORDS (chunks), not the individual letters
-        let chunks = [nPart, cPart, dPartRaw];
-        chunks = shuffleArray(chunks);
-        
-        // 2. Put them together and add the symbol at the end
+        let chunks = shuffleArray([nPart, cPart, dPartRaw]);
         let pwd = chunks.join('') + symbol;
         
-        // 3. Adjust to meet the exact length slider requirement safely
         if (pwd.length < targetLength) {
-            // If it's too short, pad it by repeating the symbol (e.g., "GowthVisha02@@@")
-            const diff = targetLength - pwd.length;
-            pwd += symbol.repeat(diff); 
+            pwd += symbol.repeat(targetLength - pwd.length); 
         } else if (pwd.length > targetLength) {
-            // If it's too long, trim the end but KEEP the symbol at the end
             pwd = pwd.substring(0, targetLength - 1) + symbol;
         }
-        
         passwords.push(pwd);
     }
     return passwords;
 }
 
+// --- EXTENSION UI & VAULT LOGIC ---
 
-// --- EXTENSION UI LOGIC ---
-
-// Wait for the DOM to be fully loaded before trying to find elements
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // 1. Live update the length slider display as you drag it
     const lengthSlider = document.getElementById('length');
     const lengthDisplay = document.getElementById('lengthDisplay');
-
     lengthSlider.addEventListener('input', (e) => {
         lengthDisplay.textContent = e.target.value;
     });
 
-    // 2. Load saved data from Chrome local storage
     chrome.storage.local.get(['savedName', 'savedCity', 'savedDob', 'savedLength'], (result) => {
         if (result.savedName) document.getElementById('name').value = result.savedName;
         if (result.savedCity) document.getElementById('city').value = result.savedCity;
@@ -98,35 +78,28 @@ document.addEventListener('DOMContentLoaded', () => {
             lengthSlider.value = result.savedLength;
             lengthDisplay.textContent = result.savedLength;
         }
-        
-        // If data is filled, instantly generate and show passwords
         if (result.savedName && result.savedCity && result.savedDob) {
             renderPasswords();
         }
     });
 
-    // 3. Connect all buttons to their specific functions
     document.getElementById('saveBtn').addEventListener('click', saveUserInfo);
     document.getElementById('generateBtn').addEventListener('click', renderPasswords);
     document.getElementById('refreshBtn').addEventListener('click', renderPasswords);
+    
+    document.getElementById('toggleVaultBtn').addEventListener('click', toggleVault);
+    document.getElementById('clearVaultBtn').addEventListener('click', clearVault);
 });
 
-
-// Function to save user inputs to Chrome storage
 function saveUserInfo() {
     chrome.storage.local.set({
         savedName: document.getElementById('name').value,
         savedCity: document.getElementById('city').value,
         savedDob: document.getElementById('dob').value,
         savedLength: document.getElementById('length').value
-    }, () => {
-        // Automatically generate passwords after saving
-        renderPasswords();
-    });
+    }, () => renderPasswords());
 }
 
-
-// Function to create and render password buttons in the interface
 function renderPasswords() {
     const name = document.getElementById('name').value;
     const city = document.getElementById('city').value;
@@ -136,7 +109,6 @@ function renderPasswords() {
     const outputContainer = document.getElementById('outputContainer');
     const outputDiv = document.getElementById('output');
     
-    // If fields are empty, show a red error message
     if (!name || !city || !dob) {
         outputDiv.innerHTML = '<span style="color:#d93025; font-size: 13px;">Please fill all fields.</span>';
         outputContainer.style.display = 'block';
@@ -144,38 +116,130 @@ function renderPasswords() {
     }
 
     const passwords = generatePasswords(name, city, dob, length);
-    outputContainer.style.display = 'block'; // Show the output container
-    outputDiv.innerHTML = ''; // Clear old results
+    outputContainer.style.display = 'block';
+    outputDiv.innerHTML = ''; 
     
     passwords.forEach(pwd => {
         const btn = document.createElement('button');
         btn.textContent = pwd;
-        btn.className = "pwd-btn"; // Apply the special button styling
-        
-        // Clicking a password button injects it directly into the active webpage
+        btn.className = "pwd-btn";
         btn.addEventListener('click', () => injectPasswordIntoPage(pwd));
         outputDiv.appendChild(btn);
     });
 }
 
+// Vault System: Save domain, username/email, and password
+function saveToVault(url, username, password) {
+    try {
+        const domain = new URL(url).hostname.replace('www.', '');
+        if (!domain) return;
 
-// Function to find a password field on the webpage and fill it with the selected password
+        chrome.storage.local.get(['passwordVault'], (result) => {
+            const vault = result.passwordVault || {};
+            vault[domain] = {
+                username: username || "Unknown User / Email",
+                password: password
+            }; 
+            chrome.storage.local.set({ passwordVault: vault });
+        });
+    } catch (e) {
+        console.log("Could not save to vault.", e);
+    }
+}
+
 function injectPasswordIntoPage(selectedPassword) {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        const activeTab = tabs[0];
+
         chrome.scripting.executeScript({
-            target: {tabId: tabs[0].id},
+            target: {tabId: activeTab.id},
             func: (pwd) => {
-                // Find standard password input fields
                 const passField = document.querySelector('input[type="password"]');
+                
+                // Search for an email/username input on the page
+                const userField = document.querySelector('input[type="email"], input[name*="user"], input[name*="email"], input[id*="user"], input[id*="email"], input[type="text"]');
+                const detectedUser = userField ? userField.value : "";
+
                 if (passField) {
                     passField.value = pwd;
-                    // Trigger a standard browser 'input' event so modern JS frameworks detect the change
                     passField.dispatchEvent(new Event('input', { bubbles: true }));
                 } else {
-                    alert("No standard password field found on this page.");
+                    navigator.clipboard.writeText(pwd);
+                    alert("No password field found. Password copied to clipboard!");
                 }
+
+                return detectedUser; // Return detected username to Chrome extension
             },
             args: [selectedPassword]
+        }, (results) => {
+            if (results && results[0] && activeTab.url) {
+                const detectedUsername = results[0].result;
+                saveToVault(activeTab.url, detectedUsername, selectedPassword);
+            }
         });
     });
+}
+
+function toggleVault() {
+    const genView = document.getElementById('generatorView');
+    const vaultView = document.getElementById('vaultView');
+    const btn = document.getElementById('toggleVaultBtn');
+
+    if (vaultView.style.display === 'none') {
+        genView.style.display = 'none';
+        vaultView.style.display = 'block';
+        btn.textContent = '🔙 Back';
+        renderVaultList();
+    } else {
+        vaultView.style.display = 'none';
+        genView.style.display = 'block';
+        btn.textContent = '🗃️';
+    }
+}
+
+function renderVaultList() {
+    const list = document.getElementById('vaultList');
+    list.innerHTML = '';
+
+    chrome.storage.local.get(['passwordVault'], (result) => {
+        const vault = result.passwordVault || {};
+        const domains = Object.keys(vault);
+
+        if (domains.length === 0) {
+            list.innerHTML = '<p class="tip">No passwords saved yet. Fill out details on a site & click a password to save!</p>';
+            return;
+        }
+
+        domains.forEach(domain => {
+            const entry = vault[domain];
+            
+            const item = document.createElement('div');
+            item.className = 'vault-item';
+            
+            const title = document.createElement('div');
+            title.className = 'vault-domain';
+            title.textContent = domain;
+
+            const user = document.createElement('div');
+            user.className = 'vault-username';
+            user.textContent = `👤 ${entry.username || 'No email detected'}`;
+
+            const pwd = document.createElement('div');
+            pwd.className = 'vault-pwd';
+            pwd.textContent = entry.password;
+
+            item.appendChild(title);
+            item.appendChild(user);
+            item.appendChild(pwd);
+            list.appendChild(item);
+        });
+    });
+}
+
+function clearVault() {
+    if (confirm("Are you sure you want to delete all saved accounts?")) {
+        chrome.storage.local.remove('passwordVault', () => {
+            renderVaultList();
+        });
+    }
 }
